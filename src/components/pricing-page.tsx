@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Nav } from "./nav";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const plans = [
   {
+    id: "starter",
     name: "Starter",
     price: "$39",
     period: "/mo",
@@ -23,8 +25,10 @@ const plans = [
     ],
     cta: "Start Free Trial",
     highlighted: false,
+    checkout: true,
   },
   {
+    id: "pro",
     name: "Pro",
     price: "$99",
     period: "/mo",
@@ -42,8 +46,10 @@ const plans = [
     ],
     cta: "Start Free Trial",
     highlighted: true,
+    checkout: true,
   },
   {
+    id: "enterprise",
     name: "Enterprise",
     price: "$249",
     period: "/mo",
@@ -63,10 +69,34 @@ const plans = [
     ],
     cta: "Contact Sales",
     highlighted: false,
+    checkout: true,
   },
 ];
 
 export function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function handleCheckout(planId: string) {
+    setLoading(planId);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong");
+        setLoading(null);
+      }
+    } catch {
+      alert("Failed to start checkout. Please try again.");
+      setLoading(null);
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <Nav />
@@ -120,7 +150,7 @@ export function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/dashboard" className="mt-8">
+              <div className="mt-8">
                 <Button
                   className={cn(
                     "w-full",
@@ -130,10 +160,19 @@ export function PricingPage() {
                   )}
                   variant={plan.highlighted ? "default" : "outline"}
                   size="lg"
+                  disabled={loading !== null}
+                  onClick={() => handleCheckout(plan.id)}
                 >
-                  {plan.cta}
+                  {loading === plan.id ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Redirecting…
+                    </>
+                  ) : (
+                    plan.cta
+                  )}
                 </Button>
-              </Link>
+              </div>
             </div>
           ))}
         </div>
